@@ -8,6 +8,7 @@ import argparse
 import yaml
 import re
 from os import path
+import sys
 
 
 def remove_item_not_in_list(list_to_remove_from, list_to_check):
@@ -24,10 +25,17 @@ def item_is_placed(d, item, after_or_before):
 
 def remove_irrelevant_requirements(reqs):
     # Remove items dependencies to partitions which are not present
-    [[remove_item_not_in_list(reqs[x]['placement'][before_after], reqs.keys())
-      for x in reqs.keys() if 'placement' in reqs[x] and type(reqs[x]['placement']) == dict
-      and before_after in reqs[x]['placement'].keys()]
-     for before_after in ['before', 'after']]
+    for x in reqs.keys():
+        if 'inside' in reqs[x].keys():
+            [remove_item_not_in_list(reqs[x]['inside'], reqs.keys())]
+            if not reqs[x]['inside']:
+                del reqs[x]['inside']
+        for before_after in ['before', 'after']:
+            if 'placement' in reqs[x] and type(reqs[x]['placement']) == dict and before_after in reqs[x]['placement'].keys():
+                [remove_item_not_in_list(reqs[x]['placement'][before_after], reqs.keys())]
+                if not reqs[x]['placement'][before_after]:
+                    del reqs[x]['placement'][before_after]
+
 
 
 def get_images_which_needs_resolving(reqs):
@@ -72,15 +80,21 @@ def solve_from_last(reqs, unsolved, solution):
 def extract_sub_partitions(reqs):
     sub_partitions = dict()
     keys_to_delete = list()
-    for key, values in reqs.items():
-        if 'span' in values.keys():
-            sub_partitions[key] = values
+    for key, value in reqs.items():
+        if 'span' in value.keys():
+            sub_partitions[key] = value
             keys_to_delete.append(key)
 
     for key in keys_to_delete:
         del reqs[key]
 
     return sub_partitions
+
+
+def solve_inside(reqs, sub_partitions):
+    for key, value in reqs.items():
+        if 'inside' in value.keys():
+            sub_partitions[value['inside'][0]]['span'].append(key)
 
 
 def resolve(reqs):
@@ -92,6 +106,7 @@ def resolve(reqs):
     solve_from_last(reqs, unsolved, solution)
     solve_direction(reqs, unsolved, solution, 'before')
     solve_direction(reqs, unsolved, solution, 'after')
+    solve_inside(reqs, sub_partitions)
 
     return solution, sub_partitions
 
@@ -153,18 +168,13 @@ def set_addresses(reqs, solution, flash_size):
 
 def set_sub_partition_address_and_size(reqs, sub_partitions):
     first_parent_partition = None
-    for sp_name, sp_values in sub_partitions.items():
-        size = 0
-        for parent_partition in sp_values['span']:
-            if parent_partition in reqs:
-                if not first_parent_partition:
-                    first_parent_partition = parent_partition
-                size += reqs[parent_partition]['size']
+    for sp_name, sp_value in sub_partitions.items():
+        size = sum([reqs[part]['size'] for part in sp_value['span']])
         if size == 0:
             raise RuntimeError("No compatible parent partition found for %s" % sp_name)
-        size = size // len(sp_values['sub_partitions'])
-        address = reqs[first_parent_partition]['address']
-        for sub_partition in sp_values['sub_partitions']:
+        address = min([reqs[part]['address'] for part in sp_value['span']])
+        size = size // len(sp_value['sub_partitions'])
+        for sub_partition in sp_value['sub_partitions']:
             sp_key_name = "%s_%s" % (sp_name, sub_partition)
             reqs[sp_key_name] = dict()
             reqs[sp_key_name]['size'] = size
@@ -365,7 +375,14 @@ def test():
     expect_addr_size(td, 'mcuboot_partitions_secondary', 600, 400)
 
     td = {'mcuboot': {'placement': {'before': ['app']}, 'size': 200},
-          'mcuboot_partitions': {'span': ['spm', 'app'], 'sub_partitions': ['primary', 'secondary']},
+          'mcuboot_partitions': {'span': ['app'], 'sub_partitions': ['primary', 'secondary']},
+          'app': {'placement': ''}}
+    s, sub_partitions = resolve(td)
+    set_addresses(td, s, 1000)
+    set_sub_partition_address_and_size(td, sub_partitions)
+
+    td = {'spm': {'placement': {'before': ['app']}, 'size': 100, 'inside': ['mcuboot_partitions']},
+          'mcuboot': {'placement': {'before': ['spm', 'app']}, 'size': 200},
           'mcuboot_partitions': {'span': ['app'], 'sub_partitions': ['primary', 'secondary']},
           'app': {'placement': ''}}
     s, sub_partitions = resolve(td)

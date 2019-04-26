@@ -341,6 +341,11 @@ def main():
         print("No input, running tests.")
         test()
 
+def expect_addr_size(td, name, expected_address, expected_size):
+    if expected_size != None:
+        assert td[name]['size'] == expected_size, "Size of %s was %d, expected %d" % (name, td[name]['size'], expected_size)
+    if expected_address != None:
+        assert td[name]['address'] == expected_address, "Address of %s was %d, expected %d" % (name, td[name]['address'], expected_address)
 
 def test():
     td = {'spm': {'placement': {'before': ['app']}, 'size': 100},
@@ -350,13 +355,24 @@ def test():
     s, sub_partitions = resolve(td)
     set_addresses(td, s, 1000)
     set_sub_partition_address_and_size(td, sub_partitions)
+    expect_addr_size(td, 'mcuboot', 0, None)
+    expect_addr_size(td, 'spm', 200, None)
+    expect_addr_size(td, 'app', 300, 700)
+    expect_addr_size(td, 'mcuboot_partitions_primary', 200, 400)
+    expect_addr_size(td, 'mcuboot_partitions_secondary', 600, 400)
 
     td = {'mcuboot': {'placement': {'before': ['app']}, 'size': 200},
           'mcuboot_partitions': {'span': ['spm', 'app'], 'sub_partitions': ['primary', 'secondary']},
+          'mcuboot_partitions': {'span': ['app'], 'sub_partitions': ['primary', 'secondary']},
           'app': {'placement': ''}}
     s, sub_partitions = resolve(td)
     set_addresses(td, s, 1000)
     set_sub_partition_address_and_size(td, sub_partitions)
+    expect_addr_size(td, 'mcuboot', 0, None)
+    expect_addr_size(td, 'app', 200, 800)
+    expect_addr_size(td, 'mcuboot_partitions_primary', 200, 400)
+    expect_addr_size(td, 'mcuboot_partitions_secondary', 600, 400)
+
 
     td = {
         'e': {'placement': {'before': ['app']}, 'size': 100},
@@ -372,22 +388,41 @@ def test():
         'app': {'placement': ''}}
     s, _ = resolve(td)
     set_addresses(td, s, 1000)
+    expect_addr_size(td, 'a', 0, None)
+    expect_addr_size(td, 'b', 100, None)
+    expect_addr_size(td, 'c', 120, None)
+    expect_addr_size(td, 'd', 220, None)
+    expect_addr_size(td, 'e', 320, None)
+    expect_addr_size(td, 'app', 420, 480)
+    expect_addr_size(td, 'f', 900, None)
+    expect_addr_size(td, 'g', 920, None)
+    expect_addr_size(td, 'h', 940, None)
+    expect_addr_size(td, 'i', 960, None)
+    expect_addr_size(td, 'j', 980, None)
 
     td = {'mcuboot': {'placement': {'before': ['app', 'spu']}, 'size': 200},
           'b0': {'placement': {'before': ['mcuboot', 'app']}, 'size': 100},
           'app': {'placement': ''}}
     s, _ = resolve(td)
     set_addresses(td, s, 1000)
+    expect_addr_size(td, 'b0', 0, None)
+    expect_addr_size(td, 'mcuboot', 100, None)
+    expect_addr_size(td, 'app', 300, 700)
 
     td = {'b0': {'placement': {'before': ['mcuboot', 'app']}, 'size': 100}, 'app': {'placement': ''}}
     s, _ = resolve(td)
     set_addresses(td, s, 1000)
+    expect_addr_size(td, 'b0', 0, None)
+    expect_addr_size(td, 'app', 100, 900)
 
     td = {'spu': {'placement': {'before': ['app']}, 'size': 100},
           'mcuboot': {'placement': {'before': ['spu', 'app']}, 'size': 200},
           'app': {'placement': ''}}
     s, _ = resolve(td)
     set_addresses(td, s, 1000)
+    expect_addr_size(td, 'mcuboot', 0, None)
+    expect_addr_size(td, 'spu', 200, None)
+    expect_addr_size(td, 'app', 300, 700)
 
     td = {'provision': {'placement': 'last', 'size': 100},
           'mcuboot': {'placement': {'before': ['spu', 'app']}, 'size': 100},
@@ -396,8 +431,13 @@ def test():
           'app': {'placement': ''}}
     s, _ = resolve(td)
     set_addresses(td, s, 1000)
-    pass
+    expect_addr_size(td, 'b0', 0, None)
+    expect_addr_size(td, 'mcuboot', 50, None)
+    expect_addr_size(td, 'spu', 150, None)
+    expect_addr_size(td, 'app', 250, 650)
+    expect_addr_size(td, 'provision', 900, None)
 
+    print ("All tests passed!")
 
 if __name__ == "__main__":
     main()

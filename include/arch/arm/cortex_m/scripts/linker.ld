@@ -276,22 +276,6 @@ SECTIONS
 	. = ALIGN(4);
 	} GROUP_LINK_IN(ROMABLE_REGION)
 
-#if defined CONFIG_ARM_FIRMWARE_HAS_SECURE_ENTRY_FUNCS
-#if CONFIG_ARM_NSC_REGION_BASE_ADDRESS != 0
-       SECTION_PROLOGUE(.gnu.sgstubs,CONFIG_ARM_NSC_REGION_BASE_ADDRESS,)
-#else
-       SECTION_PROLOGUE(.gnu.sgstubs,,)
-#endif /* CONFIG_ARM_NSC_REGION_BASE_ADDRESS != 0 */
-       {
-       . = ALIGN(4);
-       __sg_start = .;
-       *(.gnu*)
-       . = ALIGN(4);
-       __sg_end = .;
-       __sg_size = __sg_end - __sg_start;
-       } GROUP_LINK_IN(ROMABLE_REGION)
-#endif /* CONFIG_ARM_FIRMWARE_HAS_SECURE_ENTRY_FUNCS */
-
 	_image_rodata_end = .;
 	_image_rom_end = .;
 
@@ -542,6 +526,30 @@ SECTIONS
 	KEEP(*(.ARM.attributes))
 	KEEP(*(.gnu.attributes))
 	}
+
+#if defined CONFIG_ARM_FIRMWARE_HAS_SECURE_ENTRY_FUNCS
+#ifdef CONFIG_SOC_NRF9160
+//#define NSC_ALIGN . = ALIGN(0x8000) - 64
+//#define NSC_ALIGN_END . = ALIGN(0x8000)
+#define NSC_ALIGN . = ALIGN(0x8000) - (1 << LOG2CEIL(__sg_size))
+#define NSC_ALIGN_END . = ALIGN(0x8000)
+#else
+#define NSC_ALIGN . = ALIGN(4)
+#define NSC_ALIGN_END . = ALIGN(4)
+#endif
+
+#if CONFIG_ARM_NSC_REGION_BASE_ADDRESS != 0
+       SECTION_PROLOGUE(.gnu.sgstubs,CONFIG_ARM_NSC_REGION_BASE_ADDRESS,)
+#else
+       SECTION_PROLOGUE(.gnu.sgstubs,,)
+#endif /* CONFIG_ARM_NSC_REGION_BASE_ADDRESS != 0 */
+{
+       __sg_start = .;
+} GROUP_LINK_IN(ROMABLE_REGION)
+__sg_end = .;
+__sg_size = __sg_end - __sg_start;
+NSC_ALIGN_END;
+#endif /* CONFIG_ARM_FIRMWARE_HAS_SECURE_ENTRY_FUNCS */
 
 /* Must be last in romable region */
 SECTION_PROLOGUE(.last_section,(NOLOAD),)

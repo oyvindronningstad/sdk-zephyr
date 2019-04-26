@@ -1,0 +1,15 @@
+#define RAMABLE_REGION {{ ramable_region|upper }}_SRAM
+#define ROMABLE_REGION {{ romable_region|upper }}_FLASH
+
+MEMORY
+{
+{% for req in pm_config['FLASH'] if 'span' not in pm_config['FLASH'][req] -%}
+    {{ req|upper }}_FLASH         (rx) : ORIGIN = {{ pm_config['FLASH'][req]['address'] }} + ROM_ADDR, LENGTH = {{ pm_config['FLASH'][req]['size'] }}
+{% endfor %}
+{% for req in pm_config['SRAM'] if 'span' not in pm_config['SRAM'][req] -%}
+    {{ req|upper }}_SRAM          (wx) : ORIGIN = {{ pm_config['SRAM'][req]['address'] }} + RAM_ADDR, LENGTH = {{ pm_config['SRAM'][req]['size'] }}
+{% endfor %}
+
+    /* Used by and documented in include/linker/intlist.ld */
+    IDT_LIST  (wx)      : ORIGIN = (RAM_ADDR + RAM_SIZE), LENGTH = 2K
+}

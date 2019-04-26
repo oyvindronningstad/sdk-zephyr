@@ -21,15 +21,6 @@
 #include <linker/linker-defs.h>
 #include <linker/linker-tool.h>
 
-/* physical address of RAM */
-#ifdef CONFIG_XIP
-  #define ROMABLE_REGION FLASH
-  #define RAMABLE_REGION SRAM
-#else
-  #define ROMABLE_REGION SRAM
-  #define RAMABLE_REGION SRAM
-#endif
-
 #if defined(CONFIG_XIP)
   #define _DATA_IN_ROM __data_rom_start
 #else
@@ -41,9 +32,14 @@
 #endif
 
 #if USE_PARTITION_MANAGER
-#include <pm_config.h>
-#define ROM_ADDR PM_ADDRESS
-#define ROM_SIZE PM_SIZE
+
+#define ROM_ADDR (CONFIG_FLASH_BASE_ADDRESS)
+#define ROM_SIZE (CONFIG_FLASH_SIZE * 1K)
+#define RAM_ADDR (CONFIG_SRAM_BASE_ADDRESS)
+#define RAM_SIZE (CONFIG_SRAM_SIZE * 1K)
+
+#include <pm_config.ld>
+
 #else
 #define ROM_ADDR (CONFIG_FLASH_BASE_ADDRESS + CONFIG_FLASH_LOAD_OFFSET)
 #ifdef CONFIG_TI_CCFG_PRESENT
@@ -58,7 +54,6 @@
   #define ROM_SIZE (CONFIG_FLASH_SIZE*1K - CONFIG_FLASH_LOAD_OFFSET)
 #endif /* CONFIG_FLASH_LOAD_SIZE > 0 */
 #endif /* CONFIG_TI_CCFG_PRESENT */
-#endif /* USE_PARTITION_MANAGER */
 
 #if defined(CONFIG_XIP)
 	#if defined(CONFIG_IS_BOOTLOADER)
@@ -73,6 +68,33 @@
 	#define RAM_SIZE (CONFIG_SRAM_SIZE * 1K - CONFIG_BOOTLOADER_SRAM_SIZE * 1K)
 	#define RAM_ADDR CONFIG_SRAM_BASE_ADDRESS
 #endif
+
+/* physical address of RAM and ROM */
+#ifdef CONFIG_XIP
+  #define ROMABLE_REGION FLASH
+  #define RAMABLE_REGION SRAM
+#else
+  #define ROMABLE_REGION SRAM
+  #define RAMABLE_REGION SRAM
+#endif
+
+
+MEMORY
+    {
+    FLASH                 (rx) : ORIGIN = ROM_ADDR, LENGTH = ROM_SIZE
+#ifdef CONFIG_TI_CCFG_PRESENT
+    FLASH_CCFG            (rwx): ORIGIN = CCFG_ADDR, LENGTH = CCFG_SIZE
+#endif
+#ifdef DT_CCM_BASE_ADDRESS
+    CCM                   (rw) : ORIGIN = DT_CCM_BASE_ADDRESS, LENGTH = DT_CCM_SIZE * 1K
+#endif
+    SRAM                  (wx) : ORIGIN = RAM_ADDR, LENGTH = RAM_SIZE
+
+    /* Used by and documented in include/linker/intlist.ld */
+    IDT_LIST  (wx)      : ORIGIN = (RAM_ADDR + RAM_SIZE), LENGTH = 2K
+    }
+
+#endif /* USE_PARTITION_MANAGER */
 
 /* Set alignment to CONFIG_ARM_MPU_REGION_MIN_ALIGN_AND_SIZE
  * to make linker section alignment comply with MPU granularity.
@@ -92,21 +114,6 @@ _region_min_align = 4;
 #define MPU_ALIGN(region_size) \
     . = ALIGN(_region_min_align)
 #endif
-
-MEMORY
-    {
-    FLASH                 (rx) : ORIGIN = ROM_ADDR, LENGTH = ROM_SIZE
-#ifdef CONFIG_TI_CCFG_PRESENT
-    FLASH_CCFG            (rwx): ORIGIN = CCFG_ADDR, LENGTH = CCFG_SIZE
-#endif
-#ifdef DT_CCM_BASE_ADDRESS
-    CCM                   (rw) : ORIGIN = DT_CCM_BASE_ADDRESS, LENGTH = DT_CCM_SIZE * 1K
-#endif
-    SRAM                  (wx) : ORIGIN = RAM_ADDR, LENGTH = RAM_SIZE
-
-    /* Used by and documented in include/linker/intlist.ld */
-    IDT_LIST  (wx)      : ORIGIN = (RAM_ADDR + RAM_SIZE), LENGTH = 2K
-    }
 
 ENTRY(CONFIG_KERNEL_ENTRY)
 

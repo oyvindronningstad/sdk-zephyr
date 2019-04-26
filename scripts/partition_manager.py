@@ -9,6 +9,7 @@ import yaml
 import re
 from os import path
 import sys
+import jinja2
 
 
 def remove_item_not_in_list(list_to_remove_from, list_to_check):
@@ -189,11 +190,11 @@ def load_size_config(adr_map):
 
 def load_adr_map(adr_map, input_files):
     for f in input_files:
-        img_conf = yaml.safe_load(f)
-
-        adr_map.update(img_conf)
-    adr_map['app'] = dict()
-    adr_map['app']['placement'] = ''
+        regions = yaml.safe_load(f)
+        for region_name, region in regions.items():
+            if region_name not in adr_map:
+                adr_map[region_name] = dict()
+            adr_map[region_name].update(region)
 
 
 def app_size(reqs, total_size):
@@ -201,10 +202,10 @@ def app_size(reqs, total_size):
     return size
 
 
-def set_addresses(reqs, sub_partitions, solution, flash_size):
-    set_shared_size(reqs, sub_partitions, flash_size)
+def set_addresses(reqs, sub_partitions, solution, total_size):
+    set_shared_size(reqs, sub_partitions, total_size)
 
-    reqs['app']['size'] = app_size(reqs, flash_size)
+    reqs['app']['size'] = app_size(reqs, total_size)
 
     # First image starts at 0
     reqs[solution[0]]['address'] = 0
@@ -296,6 +297,10 @@ def get_flash_size(adr_map):
     return get_config(adr_map, "CONFIG_FLASH_SIZE")
 
 
+def get_sram_size(adr_map):
+    return get_config(adr_map, "CONFIG_SRAM_SIZE")
+
+
 def get_input_files(input_config):
     input_files = list()
     for v in input_config.values():
@@ -305,8 +310,9 @@ def get_input_files(input_config):
 
 def add_configurations(adr_map, input_config):
     for k, v in input_config.items():
-        adr_map[k]['out_dir'] = v['out_dir']
-        adr_map[k]['build_dir'] = v['build_dir']
+        if k in adr_map:
+            adr_map[k]['out_dir'] = v['out_dir']
+            adr_map[k]['build_dir'] = v['build_dir']
 
 
 # def print_sub_region(region, size, reqs, solution):
@@ -329,13 +335,17 @@ def get_pm_config(input_config):
     adr_map = dict()
     input_files = get_input_files(input_config)
     load_adr_map(adr_map, input_files)
-    add_configurations(adr_map, input_config)
-    load_size_config(adr_map)
-    flash_size = get_flash_size(adr_map)
-    solution, sub_partitions = resolve(adr_map)
-    set_addresses(adr_map, sub_partitions, solution, flash_size)
-    set_sub_partition_address_and_size(adr_map, sub_partitions)
-    print_region("FLASH", flash_size, adr_map, solution)
+    for region, size in [('SRAM', get_config(input_config, "CONFIG_SRAM_SIZE")), ('FLASH', get_config(input_config, "CONFIG_FLASH_SIZE"))]:
+        print("Resolving region %s" % region)
+        reqs = adr_map[region]
+        add_configurations(reqs, input_config)
+        load_size_config(reqs)
+        reqs['app'] = dict()
+        reqs['app']['placement'] = ''
+        solution, sub_partitions = resolve(reqs)
+        set_addresses(reqs, sub_partitions, solution, size)
+        set_sub_partition_address_and_size(reqs, sub_partitions)
+        print_region(region, size, reqs, solution)
     return adr_map
 
 
@@ -415,6 +425,7 @@ def write_kconfig_file(adr_map, app_output_dir):
     for area_name, area_props in adr_map.items():
         if 'out_dir' in area_props.keys():
             config_lines.append('PM_%s_OUT_DIR="%s"' % (area_name.upper(), area_props['out_dir']))
+        if 'build_dir' in area_props.keys():
             config_lines.append('PM_%s_BUILD_DIR="%s"' % (area_name.upper(), area_props['build_dir']))
 
     # Store output dir to app
@@ -448,10 +459,17 @@ This file contains all addresses and sizes of all partitions.
                              "image-name:pm.yml-path:build_dir:out_dir")
     parser.add_argument("--app-pm-config-dir", required=True,
                         help="Where to store the 'pm_config.h' of the root app.")
+    parser.add_argument("-o", "--output", required=False, type=str,
+                        help="Output yaml file for processed data.")
 
     args = parser.parse_args()
 
     return args
+
+
+def linker_template():
+    with open(path.join(path.dirname(path.abspath(__file__)), "pm_config.ld.jinja2"), 'r') as f:
+        return f.read()
 
 
 def main():
@@ -466,8 +484,20 @@ def main():
             input_config[split[0]]['build_dir'] = split[2]
             input_config[split[0]]['out_dir'] = split[3]
         pm_config = get_pm_config(input_config)
-        write_pm_config(pm_config, args.app_pm_config_dir)
-        write_kconfig_file(pm_config, args.app_pm_config_dir)
+        yamldump = yaml.dump(pm_config)
+        for region in pm_config.values():
+            region['app']['out_dir'] = args.app_pm_config_dir
+        for config_name, out_dir in [(k, v['out_dir']) for k, v in pm_config['FLASH'].items() if 'out_dir' in v]:
+            print(config_name, out_dir)
+            if args.output is not None:
+                with open(path.join(out_dir, args.output), 'w') as f:
+                    f.write(yamldump)
+            with open(path.join(out_dir, "pm_config.ld"), 'w') as f:
+                f.write(jinja2.Template(linker_template()).render(pm_config=pm_config,
+                        ramable_region=config_name if 'span' not in pm_config['SRAM'][config_name] else pm_config['SRAM'][config_name]['span'][0],
+                        romable_region=config_name if 'span' not in pm_config['FLASH'][config_name] else pm_config['FLASH'][config_name]['span'][0]))
+        write_pm_config(pm_config['FLASH'], args.app_pm_config_dir)
+        write_kconfig_file(pm_config['FLASH'], args.app_pm_config_dir)
     else:
         print("No input, running tests.")
         test()

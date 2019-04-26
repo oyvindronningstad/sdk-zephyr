@@ -20,6 +20,7 @@ if(FIRST_BOILERPLATE_EXECUTION)
       ${PYTHON_EXECUTABLE}
       ${ZEPHYR_BASE}/scripts/partition_manager.py
       --input ${partition_manager_config_files}
+      --output "partitions.yml"
       --app-pm-config-dir ${PROJECT_BINARY_DIR}/include/generated
       )
 

@@ -11,6 +11,12 @@ if(FIRST_BOILERPLATE_EXECUTION)
     PARTITION_MANAGER_CONFIG_FILES
     )
 
+  get_property(
+    partition_manager_aux_files
+    GLOBAL PROPERTY
+    PARTITION_MANAGER_AUX_FILES
+    )
+
   if(partition_manager_config_files)
     # Partition manager is enabled because we have populated config
     # files.
@@ -22,6 +28,7 @@ if(FIRST_BOILERPLATE_EXECUTION)
       --input ${partition_manager_config_files}
       --app-pm-config-dir ${PROJECT_BINARY_DIR}/include/generated
       )
+#--aux-input ${partition_manager_aux_files}
 
     # Make Partition Manager configuration available in CMake
     import_kconfig(PM_ ${PROJECT_BINARY_DIR}/include/generated/pm.config)
@@ -33,7 +40,7 @@ if(FIRST_BOILERPLATE_EXECUTION)
     set_property(
       TARGET partition_manager
       PROPERTY MCUBOOT_SLOT_SIZE
-      ${PM_MCUBOOT_PARTITIONS_PRIMARY_SIZE}
+      ${PM_MCUBOOT_SLOT0_SIZE}
       )
     set_property(
       TARGET partition_manager
@@ -43,7 +50,7 @@ if(FIRST_BOILERPLATE_EXECUTION)
     set_property(
       TARGET partition_manager
       PROPERTY MCUBOOT_SECONDARY_ADDRESS
-      ${PM_MCUBOOT_PARTITIONS_SECONDARY_ADDRESS}
+      ${PM_MCUBOOT_SLOT1_ADDRESS}
       )
 
     get_property(

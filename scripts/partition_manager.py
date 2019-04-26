@@ -9,6 +9,7 @@ import yaml
 import re
 from os import path
 import sys
+from pprint import pprint
 
 
 def remove_item_not_in_list(list_to_remove_from, list_to_check):
@@ -50,10 +51,11 @@ def outermost(reqs, elem):
     return comparison
 
 
-def get_images_which_need_resolving(reqs, sub_partitions):
+def get_images_which_need_resolving(reqs, sub_partitions, region, default):
     # Get candidates
     unsorted = [x for x in reqs.keys() if 'placement' in reqs[x] and type(reqs[x]['placement']) == dict
-                 and ('before' in reqs[x]['placement'].keys() or 'after' in reqs[x]['placement'].keys())]
+                 and ('before' in reqs[x]['placement'].keys() or 'after' in reqs[x]['placement'].keys())
+                 and (('region' in reqs[x].keys() and reqs[x]['region'] == region) or (default and 'region' not in reqs[x].keys()))]
 
     # Sort sub_partitions by whether they are inside other sub_partitions. Innermost first.
     sorted_subs = sorted(sub_partitions.values(), key=lambda x: outermost(sub_partitions, x), reverse=True)
@@ -106,24 +108,27 @@ def solve_first_last(reqs, unsolved, solution):
 
 
 
-def extract_sub_partitions(reqs):
+def extract_sub_partitions(reqs, region):
     sub_partitions = dict()
     keys_to_delete = list()
 
     for key, value in reqs.items():
-        if 'inside' in value.keys():
-            reqs[value['inside'][0]]['span'].append(key)
-        if 'span' in value.keys():
-            sub_partitions[key] = value
-            keys_to_delete.append(key)
+        if value['region'] == region:
+            if 'inside' in value.keys():
+                reqs[value['inside'][0]]['span'].append(key)
+            if 'span' in value.keys():
+                sub_partitions[key] = value
+                keys_to_delete.append(key)
 
+    print('sub_partitions:')
+    print(sub_partitions)
     # "Flatten" by changing all span lists to include the parts of partitions
     # instead of the partitions themselves.
     done = False
     while not done:
         done = True
         for key, value in reqs.items():
-            if 'span' in value.keys():
+            if 'span' in value.keys() and value['region'] == region:
                 for part in value['span']:
                     if 'span' in reqs[part].keys():
                         value['span'].extend(reqs[part]['span'])
@@ -137,12 +142,11 @@ def extract_sub_partitions(reqs):
     return sub_partitions
 
 
-def resolve(reqs):
+def resolve(reqs, region='FLASH'):
     solution = list(['app'])
     remove_irrelevant_requirements(reqs)
-    sub_partitions = extract_sub_partitions(reqs)
-    unsolved = get_images_which_need_resolving(reqs, sub_partitions)
-
+    sub_partitions = extract_sub_partitions(reqs, region)
+    unsolved = get_images_which_need_resolving(reqs, sub_partitions, region, False)
     solve_first_last(reqs, unsolved, solution)
     while unsolved:
         solve_direction(reqs, sub_partitions, unsolved, solution, 'before')
@@ -190,20 +194,17 @@ def load_adr_map(adr_map, input_files):
         img_conf = yaml.safe_load(f)
 
         adr_map.update(img_conf)
-    adr_map['app'] = dict()
-    adr_map['app']['placement'] = ''
 
 
 def app_size(reqs, total_size):
-    size = total_size - sum([req['size'] for name, req in reqs.items() if 'size' in req.keys() and name is not 'app'])
+    size = total_size - sum([req['size'] for name, req in reqs.items() if 'size' in req.keys() and name is not 'app' and req['region'] == reqs['app']['region']])
     return size
 
 
+def set_addresses(reqs, sub_partitions, solution, total_size):
+    set_inherited_size(reqs, sub_partitions, total_size, reqs['app']['region'])
 
-def set_addresses(reqs, sub_partitions, solution, flash_size):
-    set_inherited_size(reqs, sub_partitions, flash_size)
-
-    reqs['app']['size'] = app_size(reqs, flash_size)
+    reqs['app']['size'] = app_size(reqs, total_size)
 
     # First image starts at 0
     reqs[solution[0]]['address'] = 0
@@ -260,8 +261,8 @@ def get_size_source(reqs, inheritor):
     return size_source
 
 
-def set_inherited_size(reqs, sub_partitions, total_size):
-    all_reqs = dict(reqs, **sub_partitions)
+def set_inherited_size(reqs, sub_partitions, total_size, region):
+    all_reqs = {k: v for k, v in dict(reqs, **sub_partitions).items() if v['region'] == region}
     for req in all_reqs:
         if 'inherit_size' in all_reqs[req].keys():
             size_source = get_size_source(all_reqs, req)
@@ -292,6 +293,10 @@ def get_flash_size(adr_map):
     return get_config(adr_map, "CONFIG_FLASH_SIZE")
 
 
+def get_sram_size(adr_map):
+    return get_config(adr_map, "CONFIG_SRAM_SIZE")
+
+
 def get_input_files(input_config):
     input_files = list()
     for v in input_config.values():
@@ -305,6 +310,11 @@ def add_configurations(adr_map, input_config):
         adr_map[k]['build_dir'] = v['build_dir']
 
 
+def set_default_region(reqs, default_region='FLASH'):
+    for req in [val for val in reqs.values() if 'region' not in val]:
+        req['region'] = 'FLASH'
+
+
 def get_pm_config(input_config):
     adr_map = dict()
     input_files = get_input_files(input_config)
@@ -312,9 +322,27 @@ def get_pm_config(input_config):
     add_configurations(adr_map, input_config)
     load_size_config(adr_map)
     flash_size = get_flash_size(adr_map)
-    solution, sub_partitions = resolve(adr_map)
-    set_addresses(adr_map, sub_partitions, solution, flash_size)
-    set_sub_partition_address_and_size(adr_map, sub_partitions)
+    sram_size = get_sram_size(adr_map)
+    set_default_region(adr_map)
+    pprint(adr_map)
+    for region, size in [('SRAM', sram_size), ('FLASH', flash_size)]:
+        adr_map['app'] = dict()
+        adr_map['app']['placement'] = ''
+        adr_map['app']['region'] = region
+        solution, sub_partitions = resolve(adr_map, region)
+        set_addresses(adr_map, sub_partitions, solution, size)
+        set_sub_partition_address_and_size(adr_map, sub_partitions)
+        sizes = ["0x%x: %s (0x%x)" % (adr_map[part]['address'], part, adr_map[part]['size']) for part in solution]
+        maxlen = max(map(len, sizes))
+        print ("%s (0x%x)" % (region, size))
+        print ("+%s+" % ("-"*(maxlen+2)))
+        list(map(lambda s: print('| %s |' % s.ljust(maxlen)), sizes))
+        print ("+%s+" % ("-"*(maxlen+2)))
+        if region is not 'FLASH':
+            adr_map['app_'+region] = adr_map.pop('app')
+    pprint(adr_map)
+    print(adr_map['mcuboot_slot1']['placement'])
+    print(type(adr_map['mcuboot_slot1']['placement']))
     return adr_map
 
 
@@ -461,6 +489,7 @@ def test():
           'mcuboot': {'placement': {'before': ['spm', 'app']}, 'size': 200},
           'mcuboot_partitions': {'span': ['spm', 'app'], 'sub_partitions': ['primary', 'secondary']},
           'app': {'placement': ''}}
+    set_default_region(td)
     s, sub_partitions = resolve(td)
     set_addresses(td, sub_partitions, s, 1000)
     set_sub_partition_address_and_size(td, sub_partitions)
@@ -473,6 +502,7 @@ def test():
     td = {'mcuboot': {'placement': {'before': ['app']}, 'size': 200},
           'mcuboot_partitions': {'span': ['app'], 'sub_partitions': ['primary', 'secondary']},
           'app': {'placement': ''}}
+    set_default_region(td)
     s, sub_partitions = resolve(td)
     set_addresses(td, sub_partitions, s, 1000)
     set_sub_partition_address_and_size(td, sub_partitions)
@@ -490,7 +520,9 @@ def test():
           'mcuboot_data': {'placement': {'after': ['mcuboot_slot0']}, 'size': 200},
           'mcuboot_slot1': {'inherit_size': ['mcuboot_slot0'], 'placement': {'after': ['mcuboot_data']}},
           'mcuboot_slot2': {'inherit_size': ['mcuboot_slot1'], 'placement': {'after': ['mcuboot_slot1']}},
+          'rtt': {'region': 'SRAM', 'placement': {'after': ['app']}},
           'app': {'placement': ''}}
+    set_default_region(td)
     s, sub_partitions = resolve(td)
     set_addresses(td, sub_partitions, s, 1000)
     set_sub_partition_address_and_size(td, sub_partitions)
@@ -515,6 +547,7 @@ def test():
         'g': {'placement': {'after': ['f']}, 'size': 20},
         'b': {'placement': {'before': ['c']}, 'size': 20},
         'app': {'placement': ''}}
+    set_default_region(td)
     s, _ = resolve(td)
     set_addresses(td, {}, s, 1000)
     expect_addr_size(td, 'a', 0, None)
@@ -532,6 +565,7 @@ def test():
     td = {'mcuboot': {'placement': {'before': ['app', 'spu']}, 'size': 200},
           'b0': {'placement': {'before': ['mcuboot', 'app']}, 'size': 100},
           'app': {'placement': ''}}
+    set_default_region(td)
     s, _ = resolve(td)
     set_addresses(td, {}, s, 1000)
     expect_addr_size(td, 'b0', 0, None)
@@ -539,6 +573,7 @@ def test():
     expect_addr_size(td, 'app', 300, 700)
 
     td = {'b0': {'placement': {'before': ['mcuboot', 'app']}, 'size': 100}, 'app': {'placement': ''}}
+    set_default_region(td)
     s, _ = resolve(td)
     set_addresses(td, {}, s, 1000)
     expect_addr_size(td, 'b0', 0, None)
@@ -547,6 +582,7 @@ def test():
     td = {'spu': {'placement': {'before': ['app']}, 'size': 100},
           'mcuboot': {'placement': {'before': ['spu', 'app']}, 'size': 200},
           'app': {'placement': ''}}
+    set_default_region(td)
     s, _ = resolve(td)
     set_addresses(td, {}, s, 1000)
     expect_addr_size(td, 'mcuboot', 0, None)
@@ -558,6 +594,7 @@ def test():
           'b0': {'placement': {'before': ['mcuboot', 'app']}, 'size': 50},
           'spu': {'placement': {'before': ['app']}, 'size': 100},
           'app': {'placement': ''}}
+    set_default_region(td)
     s, _ = resolve(td)
     set_addresses(td, {}, s, 1000)
     expect_addr_size(td, 'b0', 0, None)

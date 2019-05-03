@@ -858,8 +858,8 @@ endfunction()
 #
 # Parse a KConfig fragment (typically with extension .config) and
 # introduce all the symbols that are prefixed with 'prefix' into the
-# CMake namespace
-function(import_kconfig prefix kconfig_fragment)
+# CMake namespace, either as properties or as variables.
+macro(do_import_kconfig prefix kconfig_fragment property)
   # Parse the lines prefixed with 'prefix' in ${kconfig_fragment}
   file(
     STRINGS
@@ -885,8 +885,22 @@ function(import_kconfig prefix kconfig_fragment)
       set(CONF_VARIABLE_VALUE ${CMAKE_MATCH_1})
     endif()
 
-    set("${CONF_VARIABLE_NAME}" "${CONF_VARIABLE_VALUE}" PARENT_SCOPE)
+    if (${property})
+      set_property(${ARGN} "${CONF_VARIABLE_NAME}" "${CONF_VARIABLE_VALUE}")
+    else()
+      set("${CONF_VARIABLE_NAME}" "${CONF_VARIABLE_VALUE}" PARENT_SCOPE)
+    endif()
   endforeach()
+endmacro()
+
+# Use do_import_kconfig() to parse KConfig into Cmake variables.
+function(import_kconfig prefix kconfig_fragment)
+  do_import_kconfig(${prefix} ${kconfig_fragment} FALSE)
+endfunction()
+
+# Use do_import_kconfig() to parse KConfig into target properties.
+function(import_kconfig_target_property prefix kconfig_fragment target)
+  do_import_kconfig(${prefix} ${kconfig_fragment} TRUE TARGET ${target} PROPERTY)
 endfunction()
 
 ########################################################

@@ -23,28 +23,17 @@ if(FIRST_BOILERPLATE_EXECUTION)
       --app-pm-config-dir ${PROJECT_BINARY_DIR}/include/generated
       )
 
-    # Make Partition Manager configuration available in CMake
-    import_kconfig(PM_ ${PROJECT_BINARY_DIR}/include/generated/pm.config)
+    if(ret EQUAL "1")
+      message( FATAL_ERROR "Partition Manager failed, aborting.")
+    endif()
 
     # Create a dummy target that we can add properties to for
     # extraction in generator expressions.
     add_custom_target(partition_manager)
 
-    set_property(
-      TARGET partition_manager
-      PROPERTY MCUBOOT_SLOT_SIZE
-      ${PM_MCUBOOT_PARTITIONS_PRIMARY_SIZE}
-      )
-    set_property(
-      TARGET partition_manager
-      PROPERTY MCUBOOT_HEADER_SIZE
-      ${PM_MCUBOOT_PAD_SIZE}
-      )
-    set_property(
-      TARGET partition_manager
-      PROPERTY MCUBOOT_SECONDARY_ADDRESS
-      ${PM_MCUBOOT_PARTITIONS_SECONDARY_ADDRESS}
-      )
+    # Make Partition Manager configuration available in CMake
+    import_kconfig(PM_ ${PROJECT_BINARY_DIR}/include/generated/pm.config)
+    import_kconfig_property(PM_ ${PROJECT_BINARY_DIR}/include/generated/pm.config partition_manager)
 
     get_property(
       hex_files_to_merge

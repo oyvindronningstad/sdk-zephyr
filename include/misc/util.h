@@ -80,6 +80,20 @@ constexpr size_t ARRAY_SIZE(T(&)[N]) { return N; }
 #define ceiling_fraction(numerator, divider) \
 	(((numerator) + ((divider) - 1)) / (divider))
 
+/* LOG2CEIL(x) = CEIL(log2(x))
+ * i.e. the exponent of the nearest power of 2 greater than or equal to x
+ * e.g LOG2CEIL(5) = 3
+ */
+#define LOG2CEIL(x) \
+	((unsigned long)(x) == 0 ? \
+		0 : (__CLZ(1) - __CLZ((unsigned long)(x)-1)+1))
+
+/* ROUND_UP_POW2(x) = 1 << LOG2CEIL(X)
+ * i.e. the nearest power of 2 greater than or equal to x.
+ * e.g. ROUND_UP_POW2(5) = 8
+ */
+#define ROUND_UP_POW2(x) (1 << LOG2CEIL(x))
+
 #ifdef INLINED
 #define INLINE inline
 #else

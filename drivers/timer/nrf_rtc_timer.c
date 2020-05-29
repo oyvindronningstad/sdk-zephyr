@@ -13,7 +13,12 @@
 #include <hal/nrf_rtc.h>
 #include <spinlock.h>
 
+#if defined(CONFIG_IS_SPM) && defined(CONFIG_SPM_NRF_RTC1_NS)
+#define RTC ((NRF_SPU->PERIPHID[NRFX_PERIPHERAL_ID_GET(NRF_RTC1)].PERM \
+		 & SPU_PERIPHID_PERM_SECATTR_Msk) ? NRF_RTC1 : NRF_RTC1_NS)
+#else
 #define RTC NRF_RTC1
+#endif
 
 #define COUNTER_SPAN BIT(24)
 #define COUNTER_MAX (COUNTER_SPAN - 1U)

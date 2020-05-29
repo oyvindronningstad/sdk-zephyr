@@ -147,7 +147,13 @@ static inline NRF_UARTE_Type *get_uarte_instance(struct device *dev)
 {
 	const struct uarte_nrfx_config *config = get_dev_config(dev);
 
+#if defined(CONFIG_IS_SPM)
+	return ((NRF_SPU->PERIPHID[NRFX_PERIPHERAL_ID_GET(config->uarte_regs)]
+					.PERM & SPU_PERIPHID_PERM_SECATTR_Msk)
+		? config->uarte_regs : (void*)(((u32_t)config->uarte_regs) - 0x10000000));
+#else
 	return config->uarte_regs;
+#endif
 }
 
 #ifdef UARTE_INTERRUPT_DRIVEN

@@ -61,8 +61,16 @@ class NrfJprogBinaryRunner(ZephyrBinaryRunner):
     def ensure_snr(self):
         if not self.snr:
             self.snr = self.get_board_snr()
+        elif int(self.snr) < 256:
+            self.snr = self.get_board_snr(int(self.snr))
 
-    def get_board_snr(self):
+    @staticmethod
+    def verify_snr(snr):
+        if snr == '0':
+            raise RuntimeError('"nrfjprog --ids" returned 0; '
+                                'is a debugger already connected?')
+
+    def get_board_snr(self, index = None):
         # Use nrfjprog --ids to discover connected boards.
         #
         # If there's exactly one board connected, it's safe to assume
@@ -75,11 +83,13 @@ class NrfJprogBinaryRunner(ZephyrBinaryRunner):
         if not snrs:
             raise RuntimeError('"nrfjprog --ids" did not find a board; '
                                'is the board connected?')
+        elif index is not None:
+            board_snr = snrs[index]
+            self.verify_snr(board_snr)
+            return board_snr
         elif len(snrs) == 1:
             board_snr = snrs[0]
-            if board_snr == '0':
-                raise RuntimeError('"nrfjprog --ids" returned 0; '
-                                   'is a debugger already connected?')
+            self.verify_snr(board_snr)
             return board_snr
         elif not sys.stdin.isatty():
             raise RuntimeError(

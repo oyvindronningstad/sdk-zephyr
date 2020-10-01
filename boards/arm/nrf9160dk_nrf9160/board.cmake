@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-set(TFM_TARGET_PLATFORM "nrf9160dk_nrf9160")
+set(TFM_TARGET_PLATFORM "nordic_nrf/nrf9160dk_nrf9160")
 set(TFM_PUBLIC_KEY_FORMAT "full")
 
 board_runner_args(nrfjprog "--nrf-family=NRF91")

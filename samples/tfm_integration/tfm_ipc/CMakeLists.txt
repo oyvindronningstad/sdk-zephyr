@@ -18,16 +18,13 @@ if(${TFM_TARGET_PLATFORM} STREQUAL "STM_NUCLEO_L552ZE_Q")
    trusted_firmware_build(BINARY_DIR ${CMAKE_BINARY_DIR}/tfm
                           BOARD ${TFM_TARGET_PLATFORM}
                           IPC
-                          CFGFILE "ConfigRegressionIPCTfmLevel2"
-                          OUT_VENEERS_FILE VENEERS_FILE
+                          ISOLATION_LEVEL 2
                           ${TFM_BL2_ARGUMENT}
    )
 else()
    trusted_firmware_build(BINARY_DIR ${CMAKE_BINARY_DIR}/tfm
                           BOARD ${TFM_TARGET_PLATFORM}
                           IPC
-                          CFGFILE "ConfigRegressionIPC"
-                          OUT_VENEERS_FILE VENEERS_FILE
                           ${TFM_BL2_ARGUMENT}
   )
 endif()
@@ -40,7 +37,4 @@ add_dependencies(app tfm)
 target_sources(app PRIVATE src/main.c)
 
 # Include TF-M secure service source files
-target_link_libraries(app PRIVATE tfm_ipc_psa_api)
-
-# Link in veneer function locations
-target_link_libraries(${ZEPHYR_CURRENT_LIBRARY} PRIVATE ${VENEERS_FILE})
+target_link_libraries(app PRIVATE ${VENEERS_FILE} tfm_ipc_psa_api)

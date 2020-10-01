@@ -9,9 +9,7 @@
 
 #include "tfm_api.h"
 #include "tfm_ns_interface.h"
-#ifdef TFM_PSA_API
 #include "psa_manifest/sid.h"
-#endif
 
 K_MUTEX_DEFINE(tfm_mutex);
 

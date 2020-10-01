@@ -93,7 +93,7 @@ manifest:
       revision: aef137b1af8aa7a0f43345c82459254b8832262e
       path: modules/crypto/mbedtls
     - name: mcuboot
-      revision: a5d79cf8ccb2c71e68ef32a71d6a2716e831d12e
+      revision: 8ebe53537b21fafbb2319866c5b2d79bf0746392
       path: bootloader/mcuboot
     - name: mcumgr
       revision: 5051f9d900bbb194a23d4ce80f3c6dc6d6780cc2
@@ -139,8 +139,8 @@ manifest:
       revision: c39888ff74acf421eeff9a7514fa9b172c3373f7
     - name: trusted-firmware-m
       path: modules/tee/tfm
-      url: https://github.com/anangl/tfm
-      revision: a5ff750325f4f93d828749ce24f0bb99bcfa7b2a
+      url: https://github.com/oyvindronningstad/trusted-firmware-m-zephyr-module
+      revision: nrf_platforms
 
   self:
     path: zephyr

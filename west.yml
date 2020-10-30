@@ -21,6 +21,8 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
+    - name: oyvindronningstad
+      url-base: https://github.com/oyvindronningstad
 
   #
   # Please add items below based on alphabetical order
@@ -139,7 +141,9 @@ manifest:
       revision: c39888ff74acf421eeff9a7514fa9b172c3373f7
     - name: trusted-firmware-m
       path: modules/tee/tfm
-      revision: bb15a511a509c81135af61e02f9f4bfaf86d7fde
+      repo-path: trusted-firmware-m-zephyr-module
+      revision: cmake-refactor
+      remote: oyvindronningstad
 
   self:
     path: zephyr

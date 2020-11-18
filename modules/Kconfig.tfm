@@ -110,6 +110,27 @@ config TFM_REGRESSION
 	  When enabled, this option signifies that the TF-M build includes
 	  the Secure and the Non-Secure regression tests.
 
+config TFM_NATIVE_NS
+	bool "Use the TF-M-built NS app"
+	help
+	  Use the TF-M-built NS app instead of the Zephyr. E.g. for running
+	  TF-M's tests.
+
+config TFM_PSA_TEST_CRYPTO
+	bool "Crypto tests"
+	help
+	  Enable the PSA Crypto test suite.
+
+config TFM_PSA_TEST_STORAGE
+	bool "Storage tests"
+	help
+	  Enable the PSA Storage test suite.
+
+config TFM_PSA_TEST_INITIAL_ATTESTATION
+	bool "Initial attestation tests"
+	help
+	  Enable the PSA Initial Attestation test suite.
+
 
 if !TFM_BL2_FALSE
 

@@ -10,4 +10,4 @@ clang-format -i \
 	lwm2m_senml_cbor_encode.c lwm2m_senml_cbor_encode.h \
 	lwm2m_senml_cbor_types.h
 
-git apply lwm2m_senml_cbor.patch
+git am -3 lwm2m_senml_cbor.patch

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 /*
- * Generated using zcbor version 0.5.1
+ * Generated using zcbor version 0.6.0
  * https://github.com/zephyrproject-rtos/zcbor
  * Generated with a --default-max-qty of 99
  */
@@ -21,9 +21,7 @@
 
 enum lwm2m_senml_cbor_key {
 	lwm2m_senml_cbor_key_bn = -2,
-	lwm2m_senml_cbor_key_bt = -3,
 	lwm2m_senml_cbor_key_n  = 0,
-	lwm2m_senml_cbor_key_t  = 6,
 	lwm2m_senml_cbor_key_vi = 2,
 	lwm2m_senml_cbor_key_vf = 2,
 	lwm2m_senml_cbor_key_vs = 3,

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 /*
- * Generated using zcbor version 0.5.1
+ * Generated using zcbor version 0.6.0
  * https://github.com/zephyrproject-rtos/zcbor
  * Generated with a --default-max-qty of 99
  */
@@ -13,7 +13,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <limits.h>
 #include "zcbor_encode.h"
 #include "lwm2m_senml_cbor_encode.h"
 #include "lwm2m_senml_cbor_types.h"
@@ -37,9 +36,8 @@ static bool encode_repeated_record_bn(zcbor_state_t *state, const struct record_
 	bool tmp_result = ((((zcbor_int32_put(state, (-2)))) &&
 			    (zcbor_tstr_encode(state, (&(*input)._record_bn)))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -49,14 +47,13 @@ static bool encode_repeated_record_bt(zcbor_state_t *state, const struct record_
 	zcbor_print("%s\r\n", __func__);
 
 	bool tmp_result = ((((zcbor_int32_put(state, (-3)))) &&
-			    ((((*input)._record_bt >= INT64_MIN) &&
-			      ((*input)._record_bt <= INT64_MAX)) ||
+			    ((((*input)._record_bt >= -9223372036854775807LL) &&
+			      ((*input)._record_bt <= 9223372036854775807LL)) ||
 			     (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)) &&
 			    (zcbor_int64_encode(state, (&(*input)._record_bt)))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -68,9 +65,8 @@ static bool encode_repeated_record_n(zcbor_state_t *state, const struct record_n
 	bool tmp_result = ((((zcbor_uint32_put(state, (0)))) &&
 			    (zcbor_tstr_encode(state, (&(*input)._record_n)))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -79,15 +75,14 @@ static bool encode_repeated_record_t(zcbor_state_t *state, const struct record_t
 {
 	zcbor_print("%s\r\n", __func__);
 
-	bool tmp_result =
-		((((zcbor_uint32_put(state, (6)))) &&
-		  ((((*input)._record_t >= INT64_MIN) && ((*input)._record_t <= INT64_MAX)) ||
-		   (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)) &&
-		  (zcbor_int64_encode(state, (&(*input)._record_t)))));
+	bool tmp_result = ((((zcbor_uint32_put(state, (6)))) &&
+			    ((((*input)._record_t >= -9223372036854775807LL) &&
+			      ((*input)._record_t <= 9223372036854775807LL)) ||
+			     (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE), false)) &&
+			    (zcbor_int64_encode(state, (&(*input)._record_t)))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -118,13 +113,12 @@ static bool encode_repeated_record_union(zcbor_state_t *state, const struct reco
 								    ? (((zcbor_uint32_put(state,
 											  (8)))) &&
 								       (zcbor_bstr_encode(
-									    state,
-									    (&(*input)._union_vd))))
+									state,
+									(&(*input)._union_vd))))
 								    : false)))))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -139,8 +133,10 @@ static bool encode_value(zcbor_state_t *state, const struct value_ *input)
 			: (((*input)._value_choice == _value_bstr)
 				   ? ((zcbor_bstr_encode(state, (&(*input)._value_bstr))))
 				   : (((*input)._value_choice == _value_int)
-					      ? (((((*input)._value_int >= INT64_MIN) &&
-						   ((*input)._value_int <= INT64_MAX)) ||
+					      ? (((((*input)._value_int >=
+						    INT64_MIN) &&
+						   ((*input)._value_int <=
+						    INT64_MAX)) ||
 						  (zcbor_error(state, ZCBOR_ERR_WRONG_RANGE),
 						   false)) &&
 						 (zcbor_int64_encode(state,
@@ -155,9 +151,8 @@ static bool encode_value(zcbor_state_t *state, const struct value_ *input)
 									(&(*input)._value_bool))))
 								    : false)))))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -169,9 +164,8 @@ static bool encode_key_value_pair(zcbor_state_t *state, const struct key_value_p
 	bool tmp_result = ((((zcbor_int32_encode(state, (&(*input)._key_value_pair_key)))) &&
 			    (encode_value(state, (&(*input)._key_value_pair)))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -183,21 +177,25 @@ static bool encode_repeated_record__key_value_pair(zcbor_state_t *state,
 
 	bool tmp_result = (((encode_key_value_pair(state, (&(*input)._record__key_value_pair)))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
 
-static bool encode_record(
-		zcbor_state_t *state, const struct record *input)
+static bool encode_record(zcbor_state_t *state, const struct record *input)
 {
 	zcbor_print("%s\r\n", __func__);
 
+<<<<<<< HEAD
+	bool tmp_result = (((zcbor_map_start_encode(state, 10) &&
+||||||| constructed merge base
+	bool tmp_result = (((zcbor_map_start_encode(state, 6) &&
+=======
 	int max_keys = ARRAY_SIZE(input->_record__key_value_pair);
 
-	bool tmp_result = (((zcbor_map_start_encode(state, max_keys + 5) &&
+	bool tmp_result = (((zcbor_map_start_encode(state, max_keys + 3) &&
+>>>>>>> patch
 			     ((zcbor_present_encode(&((*input)._record_bn_present),
 						    (zcbor_encoder_t *)encode_repeated_record_bn,
 						    state, (&(*input)._record_bn)) &&
@@ -214,16 +212,27 @@ static bool encode_record(
 						    (zcbor_encoder_t *)encode_repeated_record_union,
 						    state, (&(*input)._record_union)) &&
 			       zcbor_multi_encode_minmax(
+<<<<<<< HEAD
+				       0, 5, &(*input)._record__key_value_pair_count,
+||||||| constructed merge base
+				       0, 3, &(*input)._record__key_value_pair_count,
+=======
 				       0, max_keys, &(*input)._record__key_value_pair_count,
+>>>>>>> patch
 				       (zcbor_encoder_t *)encode_repeated_record__key_value_pair,
 				       state, (&(*input)._record__key_value_pair),
 				       sizeof(struct record__key_value_pair))) ||
 			      (zcbor_list_map_end_force_encode(state), false)) &&
-			     zcbor_map_end_encode(state, max_keys + 5))));
+<<<<<<< HEAD
+			     zcbor_map_end_encode(state, 10))));
+||||||| constructed merge base
+			     zcbor_map_end_encode(state, 6))));
+=======
+			     zcbor_map_end_encode(state, max_keys + 3))));
+>>>>>>> patch
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
@@ -241,15 +250,14 @@ static bool encode_lwm2m_senml(zcbor_state_t *state, const struct lwm2m_senml *i
 			      (zcbor_list_map_end_force_encode(state), false)) &&
 			     zcbor_list_end_encode(state, max_records))));
 
-	if (!tmp_result) {
+	if (!tmp_result)
 		zcbor_trace();
-	}
 
 	return tmp_result;
 }
 
 int cbor_encode_lwm2m_senml(uint8_t *payload, size_t payload_len, const struct lwm2m_senml *input,
-		size_t *payload_len_out)
+			    size_t *payload_len_out)
 {
 	zcbor_state_t states[5];
 
